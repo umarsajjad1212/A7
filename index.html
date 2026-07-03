@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>HUD AR Product Viewer - Pro Edition</title>
+
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family: 'Courier New', monospace;
+}
+
+body,html{
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#02080b;
+    color:#00ffcc;
+}
+
+/* GRID */
+.hud-bg-grid{
+    position:absolute;
+    inset:0;
+    background-image:
+    linear-gradient(rgba(0,255,204,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,204,0.04) 1px, transparent 1px);
+    background-size:40px 40px;
+    z-index:1;
+    pointer-events:none;
+}
+
+/* MODEL */
+model-viewer{
+    width:100%;
+    height:100%;
+    position:absolute;
+    inset:0;
+    z-index:2;
+    --poster-color:transparent;
+}
+
+/* HUD LAYER */
+.hud-overlay{
+    position:absolute;
+    inset:0;
+    z-index:3;
+    pointer-events:none;
+    padding:25px;
+}
+
+/* FRAME */
+.hud-frame{
+    position:absolute;
+    inset:15px;
+    border:1px solid rgba(0,255,204,0.2);
+    pointer-events:none;
+}
+
+/* LEFT PANEL */
+.left-panel{
+    position:absolute;
+    top:25px;
+    left:25px;
+    width:280px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+
+/* BOX */
+.box{
+    background:rgba(0,0,0,0.55);
+    border-left:3px solid #00ffcc;
+    padding:14px;
+    backdrop-filter:blur(6px);
+}
+
+.label{
+    font-size:10px;
+    opacity:0.6;
+    letter-spacing:1px;
+}
+
+.value{
+    font-size:15px;
+    margin-top:4px;
+    color:#fff;
+}
+
+.price{
+    color:#00ffcc;
+}
+
+/* SIZE */
+.sizes{
+    display:flex;
+    gap:6px;
+    margin-top:8px;
+}
+
+.size{
+    padding:4px 8px;
+    border:1px solid rgba(0,255,204,0.4);
+    cursor:pointer;
+    font-size:12px;
+    transition:0.2s;
+    opacity:0;
+    transform:translateY(5px);
+}
+
+.size.show{
+    opacity:1;
+    transform:translateY(0);
+}
+
+.size:hover,.size.active{
+    background:#00ffcc;
+    color:#000;
+}
+
+/* RIGHT */
+.right-panel{
+    position:absolute;
+    bottom:25px;
+    right:25px;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:10px;
+    opacity:0;
+    transition:0.6s;
+}
+
+/* DPAD */
+.dpad{
+    display:flex;
+    gap:6px;
+}
+
+.btn{
+    width:34px;
+    height:34px;
+    border:1px solid #00ffcc;
+    background:rgba(0,255,204,0.05);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    transition:0.2s;
+}
+
+.btn:hover{
+    background:#00ffcc;
+    color:#000;
+}
+
+/* AR BUTTON */
+.ar-btn{
+    position:absolute;
+    top:25px;
+    right:25px;
+    padding:10px 20px;
+    border:2px solid #00ffcc;
+    background:transparent;
+    color:#00ffcc;
+    cursor:pointer;
+    opacity:0;
+    transform:translateY(-10px);
+    transition:0.4s;
+}
+
+.ar-btn.show{
+    opacity:1;
+    transform:translateY(0);
+}
+
+/* SCAN */
+.scan{
+    position:absolute;
+    inset:0;
+    display:none;
+    z-index:5;
+}
+
+.scan-line{
+    position:absolute;
+    height:3px;
+    width:100%;
+    background:#00ffcc;
+    box-shadow:0 0 15px #00ffcc;
+    animation:scan 2s linear infinite;
+}
+
+@keyframes scan{
+    0%{top:0}
+    50%{top:100%}
+    100%{top:0}
+}
+
+.scan-text{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    border:1px dashed #00ffcc;
+    padding:10px 20px;
+    background:rgba(0,0,0,0.7);
+}
+
+/* MOBILE */
+@media(max-width:768px){
+.left-panel{width:auto; right:15px;}
+.right-panel{display:none;}
+}
+</style>
+</head>
+
+<body>
+
+<div class="hud-bg-grid"></div>
+<div class="hud-frame"></div>
+
+<model-viewer
+id="model"
+src="Sneakers.glb"
+camera-controls
+auto-rotate
+ar
+ar-modes="webxr scene-viewer quick-look"
+interaction-prompt="none">
+</model-viewer>
+
+<button class="ar-btn" id="arBtn" onclick="openAR()">View AR</button>
+
+<div class="hud-overlay">
+
+<!-- LEFT -->
+<div class="left-panel">
+
+<div class="box">
+<div class="label">MODEL</div>
+<div class="value" id="modelName"></div>
+</div>
+
+<div class="box">
+<div class="label">COLOR</div>
+<div class="value" id="color"></div>
+</div>
+
+<div class="box">
+<div class="label">PRICE</div>
+<div class="value price" id="price"></div>
+</div>
+
+<div class="box">
+<div class="label">SIZE</div>
+<div class="sizes" id="sizes">
+<div class="size" onclick="selectSize(this)">7</div>
+<div class="size" onclick="selectSize(this)">8</div>
+<div class="size" onclick="selectSize(this)">9</div>
+<div class="size" onclick="selectSize(this)">10</div>
+</div>
+</div>
+
+</div>
+
+<!-- RIGHT -->
+<div class="right-panel" id="right">
+<div class="dpad">
+<div class="btn" onclick="rotate(-30)">⟲</div>
+<div class="btn" onclick="rotate(30)">⟳</div>
+</div>
+</div>
+
+</div>
+
+<!-- SCAN -->
+<div class="scan" id="scan">
+<div class="scan-line"></div>
+<div class="scan-text">SCANNING...</div>
+</div>
+
+<script>
+const model = document.getElementById("model");
+
+document.getElementById("modelName").innerText="CYBER-X SNEAKERS";
+document.getElementById("color").innerText="MATTE BLACK";
+document.getElementById("price").innerText="Rs. 14,999";
+
+/* SIZE ANIMATION */
+window.addEventListener("load",()=>{
+let sizes=document.querySelectorAll(".size");
+sizes.forEach((s,i)=>{
+setTimeout(()=>s.classList.add("show"),i*120);
+});
+setTimeout(startScan,1200);
+});
+
+/* SCAN */
+function startScan(){
+document.getElementById("scan").style.display="block";
+
+setTimeout(()=>{
+document.getElementById("scan").style.display="none";
+document.getElementById("arBtn").classList.add("show");
+document.getElementById("right").style.opacity="1";
+},3000);
+}
+
+/* ROTATION FIX */
+function rotate(deg){
+let orbit = model.getCameraOrbit();
+model.cameraOrbit =
+`${(orbit.theta*180/Math.PI)+deg}deg ${orbit.phi*180/Math.PI}deg auto`;
+}
+
+/* SIZE */
+function selectSize(el){
+document.querySelectorAll(".size").forEach(b=>b.classList.remove("active"));
+el.classList.add("active");
+}
+
+/* AR */
+function openAR(){
+const btn=document.getElementById("arBtn");
+btn.innerText="Launching...";
+document.querySelector("model-viewer").activateAR();
+
+setTimeout(()=>{
+btn.innerText="View AR";
+},2000);
+}
+</script>
+
+</body>
+</html>
